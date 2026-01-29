@@ -239,6 +239,7 @@
         <button id="heidiBtn">Heidi innom (+0.5 i 20 min)</button>
         <button id="katrineBtn">Katrine innom (+0.5 i 20 min)</button>
         <button id="chaosVisitorBtn">“Sjefen” innom (-0.5 i 15 min)</button>
+         <button id="kristianBtn">Kristian lager kaffe og er slave ☕ (+1)</button>
       </div>
       <div class="row" style="margin-top:6px;">
         <input id="customVisitorName" type="text" placeholder="Egen besøkende… (f.eks. Martin)" />
@@ -795,6 +796,8 @@ try {
   document.getElementById("heidiBtn").addEventListener("click", () => addVisitor("Heidi", 0.5, 20));
   document.getElementById("katrineBtn").addEventListener("click", () => addVisitor("Katrine", 0.5, 20));
   document.getElementById("chaosVisitorBtn").addEventListener("click", () => addVisitor("Sjefen", -0.5, 15));
+  document.getElementById("kristianBtn")
+  .addEventListener("click", () => {addVisitor("Kristian (kaffe-slave ☕)", 1, 30); });
   document.getElementById("customVisitorAdd").addEventListener("click", () => {
     const name = document.getElementById("customVisitorName").value.trim();
     if (!name) return;
@@ -906,3 +909,4 @@ try {
 </script>
 </body>
 </html>
+
