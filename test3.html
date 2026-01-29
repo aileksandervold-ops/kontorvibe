@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kontorstemning – Aleksander & Frode</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --bg1:#0b1020; --bg2:#101b3a;
+      --card:rgba(255,255,255,.08);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh; display:grid; place-items:center;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(120,80,255,.35), transparent 55%),
+        radial-gradient(900px 600px at 80% 0%, rgba(0,200,255,.28), transparent 60%),
+        linear-gradient(140deg,var(--bg1),var(--bg2));
+      padding:18px;
+    }
+    .wrap{width:min(1020px,100%); display:grid; gap:14px;}
+    .title{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+    h1{margin:0; font-size:clamp(20px,2.4vw,28px); letter-spacing:.2px}
+    .subtitle{color:var(--muted); font-size:14px}
+    .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+    @media (max-width:860px){ .grid{grid-template-columns:1fr;} }
+    .card{
+      background:var(--card);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      backdrop-filter:blur(10px);
+    }
+    .card h2{margin:0 0 10px 0; font-size:16px; letter-spacing:.2px}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--muted); font-size:13px;
+    }
+    .btns{display:flex; gap:8px; flex-wrap:wrap;}
+    button{
+      appearance:none; border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text); padding:10px 12px; border-radius:12px;
+      cursor:pointer; transition:transform 120ms ease, background 120ms ease, border-color 120ms ease;
+      font-weight:700;
+    }
+    button:hover{transform:translateY(-1px); background:rgba(255,255,255,.09)}
+    button:active{transform:translateY(0)}
+    button.sel{background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.28)}
+    .big{
+      display:grid; gap:8px; padding:18px; border-radius:18px;
+      background:linear-gradient(140deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .scoreline{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+    .score{font-size:42px; font-weight:900; letter-spacing:-.5px}
+    .emoji{font-size:42px; filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
+    .status{color:var(--muted); font-size:14px}
+    .bar{height:10px; border-radius:999px; background:rgba(255,255,255,.10); overflow:hidden; border:1px solid rgba(255,255,255,.10)}
+    .fill{
+      height:100%; width:50%;
+      background:linear-gradient(90deg, rgba(255,80,80,.9), rgba(255,210,80,.9), rgba(80,255,170,.9));
+      filter:saturate(1.1); transform-origin:left;
+    }
+    .small{color:var(--muted); font-size:12px}
+    .actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;}
+    .linkish{background:transparent; border-color:rgba(255,255,255,.18); color:var(--muted); font-weight:800;}
+    .tags{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+    .tagBtn{padding:8px 10px; border-radius:999px; font-weight:800}
+    input[type="text"]{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+    }
+    .history{margin-top:10px; display:grid; gap:8px;}
+    .histItem{
+      padding:10px 12px; border-radius:14px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(255,255,255,.80);
+      font-size:13px;
+    }
+    .banner{
+      display:none;
+      padding:10px 12px; border-radius:14px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      font-weight:900;
+    }
+    .banner.show{display:block}
+
+    /* TV mode sizing */
+    body.tv .wrap { width: min(1400px, 100%); }
+    body.tv h1 { font-size: clamp(28px, 3.6vw, 46px); }
+    body.tv .score { font-size: 72px; }
+    body.tv .emoji { font-size: 72px; }
+    body.tv .status { font-size: 18px; }
+    body.tv .pill { font-size: 16px; padding: 10px 14px; }
+    body.tv button { padding: 14px 16px; border-radius: 14px; font-size: 15px; }
+    body.tv .card { padding: 18px; border-radius: 22px; }
+    body.tv .bar { height: 14px; }
+
+    /* Dim overlay */
+    #dimOverlay{
+      position:fixed; inset:0;
+      display:none;
+      background:rgba(0,0,0,0.55);
+      backdrop-filter: blur(2px);
+      z-index:9999;
+    }
+    #dimOverlay.show{ display:block; }
+    #dimOverlay .box{
+      position:absolute; left:50%; top:50%;
+      transform:translate(-50%,-50%);
+      text-align:center;
+      padding:18px 20px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.08);
+    }
+    #dimOverlay .box .big{ font-size:22px; font-weight:900; color:rgba(255,255,255,.92); }
+    #dimOverlay .box .small{ margin-top:6px; color:rgba(255,255,255,.75); }
+
+    /* Fullscreen hint card */
+    #fsHint { background: rgba(255,255,255,0.10); }
+    #fsHint button { font-weight: 900; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h1>Kontorstemning: Aleksander & Frode</h1>
+      <div class="subtitle" id="lastUpdated">—</div>
+    </div>
+
+    <div class="card" id="fsHint" style="display:none;">
+      <div class="title" style="align-items:center;">
+        <h2 style="margin:0;">Storskjerm</h2>
+        <div class="actions">
+          <button id="fsHintBtn">Gå i fullskjerm</button>
+          <button class="linkish" id="fsHintHide">Skjul</button>
+        </div>
+      </div>
+      <div class="status" style="margin-top:10px;">
+        Tips: Fullskjerm gjør dette mer “dashboard” og mindre “nettleser”.
+      </div>
+    </div>
+
+    <div class="card big" id="vibeCard">
+      <div class="scoreline">
+        <div>
+          <div class="small">Samlet vibe (1–5)</div>
+          <div class="score" id="avgScore">—</div>
+        </div>
+        <div class="emoji" id="avgEmoji">🧠</div>
+      </div>
+      <div class="bar"><div class="fill" id="fill"></div></div>
+      <div class="status" id="avgText">Sett stemning for dere begge 👇</div>
+      <div class="banner" id="frodeBanner">DUÅ’N FRODE MODE: AKTIVERT 💥</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Aleksander</h2>
+        <div class="row">
+          <span class="pill" id="aLabel">Ikke satt</span>
+          <span class="pill" id="aNotePill">Ingen kommentar</span>
+        </div>
+        <div class="btns" id="aBtns"></div>
+
+        <div class="small" style="margin-top:10px;">Hurtigstatus</div>
+        <div class="tags" id="aTags"></div>
+
+        <div class="small" style="margin-top:10px;">Egen kommentar</div>
+        <div class="row" style="margin-top:6px;">
+          <input id="aNote" type="text" placeholder="Skriv kort… (enter for å lagre)" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Frode</h2>
+        <div class="row">
+          <span class="pill" id="fLabel">Ikke satt</span>
+          <span class="pill" id="fNotePill">Ingen kommentar</span>
+        </div>
+        <div class="btns" id="fBtns"></div>
+
+        <div class="small" style="margin-top:10px;">Hurtigstatus</div>
+        <div class="tags" id="fTags"></div>
+
+        <div class="small" style="margin-top:10px;">Egen kommentar</div>
+        <div class="row" style="margin-top:6px;">
+          <input id="fNote" type="text" placeholder="Skriv kort… (enter for å lagre)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">
+        <h2 style="margin:0;">Kontorknappene</h2>
+        <div class="actions">
+          <button class="linkish" id="copyLinkBtn">Kopier link</button>
+          <button class="linkish" id="muteBtn">Mute: AV</button>
+          <button class="linkish" id="tvBtn">Storskjerm: AV</button>
+          <button class="linkish" id="fsBtn">Fullskjerm</button>
+          <button class="linkish" id="lockTvBtn">Lås: AV</button>
+          <button class="linkish" id="frodeModeBtn">Frode-mode</button>
+          <button class="linkish" id="resetBtn">Nullstill</button>
+        </div>
+      </div>
+
+      <div class="status" id="nudgeText" style="margin-top:10px;">
+        Tip: Etter publisering kan dere scanne QR under og stemme fra mobil.
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <span class="pill" id="dailyPill">Dagens vibe: —</span>
+        <span class="pill" id="dailyCountPill">Endringer i dag: —</span>
+        <span class="pill" id="visitorPill">Ingen besøk</span>
+      </div>
+
+      <div class="small" style="margin-top:12px;">Besøk (midlertidig)</div>
+      <div class="row" style="margin-top:6px;">
+        <button id="heidiBtn">Heidi innom (+0.5 i 20 min)</button>
+        <button id="katrineBtn">Katrine innom (+0.5 i 20 min)</button>
+        <button id="chaosVisitorBtn">“Sjefen” innom (-0.5 i 15 min)</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <input id="customVisitorName" type="text" placeholder="Egen besøkende… (f.eks. Martin)" />
+        <button id="customVisitorAdd">Legg til (+0.5 i 20 min)</button>
+      </div>
+
+      <div class="small" style="margin-top:12px;">Scan & stem</div>
+      <div class="row" style="margin-top:6px;">
+        <span class="pill" id="qrPill">QR peker til denne siden</span>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <img id="qrImg" alt="QR" style="width:160px; height:160px; border-radius:16px; border:1px solid rgba(255,255,255,.14);" />
+      </div>
+
+      <div class="small" style="margin-top:12px;">Siste hendelser</div>
+      <div class="history" id="history"></div>
+    </div>
+  </div>
+
+  <div id="dimOverlay">
+    <div class="box">
+      <div class="big">Zzz…</div>
+      <div class="small">Trykk / klikk for å vekke dashboardet</div>
+    </div>
+  </div>
+
+<script>
+  // ======================
+  // SUPABASE (SYNC)
+  // ======================
+  // LIM INN DINE HER:
+ // LIM INN DINE (eller la stå tomt for lokal test)
+const SUPABASE_URL = "https://pljuwsrsnziswxrmycep.supabase.co";        // f.eks. "https://xxxx.supabase.co"
+const SUPABASE_ANON_KEY = "sb_publishable_cWbtVdyUjVo_QjDdMGWYTw_d301lZnl ";   // f.eks. "sb_publishable_..."
+const ROOM = "aleksander-frode-kontor";
+
+const clientId = crypto.randomUUID?.() ?? String(Math.random()).slice(2);
+let applyingRemote = false;
+
+let sb = null;
+try {
+  const looksLikeUrl = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("http");
+  const looksLikeKey = typeof SUPABASE_ANON_KEY === "string" && SUPABASE_ANON_KEY.length > 20;
+
+  if (looksLikeUrl && looksLikeKey && window.supabase?.createClient) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch (e) {
+  console.error("Supabase init failed:", e);
+  sb = null;
+}
+
+  // ======================
+  // DATA
+  // ======================
+  const KEY = "kontorVibe_full_v2";
+  const state = loadLocal() ?? {
+    a: null, f: null,
+    aNote: "", fNote: "",
+    frodeMode: false,
+    updatedAt: null,
+    history: [],
+
+    muted: false,
+    tvMode: false,
+    tvLocked: false,
+
+    idleDimMinutes: 7,
+    dimmed: false,
+
+    daily: {},
+    visitors: []
+  };
+
+  const levels = [
+    { v: 1, emoji: "😵‍💫", text: "Overlevelsesmodus. Kun korte setninger og lang avstand." },
+    { v: 2, emoji: "😐",   text: "Lav puls, lav prat. Ting funker… ish." },
+    { v: 3, emoji: "🙂",   text: "Stabilt. Kontoret går på skinner (med litt knirking)." },
+    { v: 4, emoji: "😄",   text: "Bra flyt! Nå er dere farlige." },
+    { v: 5, emoji: "🔥",   text: "Peak vibes. Dette er ‘ikke forstyrr’-sonen (med glis)." }
+  ];
+
+  const moodLabels = {
+    1: "1 – Overlevelse",
+    2: "2 – Litt seig",
+    3: "3 – Stabil",
+    4: "4 – Flyt",
+    5: "5 – Magi"
+  };
+
+  // Hurtigstatus + KAOS
+  const quickTags = [
+    { label: "Kaffe tom" },
+    { label: "Teams-møte" },
+    { label: "Treningsklar" },
+    { label: "Sulten" },
+    { label: "Lyst på snus" },
+    { label: "Jeg kommer snart 💦", chaos: true }
+  ];
+
+  // ======================
+  // HELPERS
+  // ======================
+  function whoName(w) { return w === "a" ? "Aleksander" : "Frode"; }
+  function nowISO() { return new Date().toISOString(); }
+
+  function fmtTime(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString("no-NO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" });
+    } catch { return "—"; }
+  }
+
+  function pushHistory(text) {
+    const item = { t: nowISO(), text };
+    state.history.unshift(item);
+    state.history = state.history.slice(0, 12);
+  }
+
+  function todayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function bumpDaily(val) {
+    const k = todayKey();
+    state.daily[k] = state.daily[k] ?? { count: 0, sum: 0 };
+    state.daily[k].count += 1;
+    state.daily[k].sum += val;
+  }
+
+  // Visitors
+  function addMinutesISO(mins) {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + mins);
+    return d.toISOString();
+  }
+  function pruneVisitors() {
+    const now = Date.now();
+    state.visitors = (state.visitors ?? []).filter(v => new Date(v.untilISO).getTime() > now);
+  }
+  function visitorBoost() {
+    pruneVisitors();
+    return (state.visitors ?? []).reduce((sum, v) => sum + (v.effect || 0), 0);
+  }
+  async function addVisitor(name, effect, mins) {
+    pruneVisitors();
+    state.visitors = state.visitors ?? [];
+    state.visitors.unshift({ name, effect, untilISO: addMinutesISO(mins) });
+    state.updatedAt = nowISO();
+    pushHistory(`👋 ${name} innom (${effect >= 0 ? "+" : ""}${effect}) i ${mins} min`);
+    await save(state);
+    render();
+  }
+
+  // ======================
+  // SOUND + FX
+  // ======================
+  function playPlop() {
+    if (state.muted) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(420, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(160, ctx.currentTime + 0.10);
+
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.14);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+      osc.onended = () => ctx.close();
+    } catch {}
+  }
+
+  function flashChaos() {
+    const card = document.getElementById("vibeCard");
+    card.animate(
+      [
+        { boxShadow: "0 0 0 rgba(255,0,200,0)" },
+        { boxShadow: "0 0 40px rgba(255,0,200,.9)" },
+        { boxShadow: "0 0 0 rgba(255,0,200,0)" }
+      ],
+      { duration: 700, easing: "ease-out" }
+    );
+  }
+
+  // ======================
+  // PERSISTENCE + (optional) SYNC
+  // ======================
+  function loadLocal() {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+
+  async function save(obj) {
+    localStorage.setItem(KEY, JSON.stringify(obj));
+    if (!sb) return;
+
+    if (applyingRemote) return;
+
+    // Optimistisk UI: vi vil ikke blokkere på feil
+    const payload = { ...obj, _meta: { clientId } };
+
+    try {
+      const { error } = await sb.from("office_vibe").upsert({
+        room: ROOM,
+        state: payload,
+        updated_at: nowISO()
+      });
+      if (error) throw error;
+
+      document.getElementById("lastUpdated").textContent =
+        "Lagring OK ✅ " + new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+
+    } catch (err) {
+      console.error(err);
+      document.getElementById("lastUpdated").textContent =
+        "Kunne ikke lagre til Supabase ❌ (se Console)";
+    }
+  }
+
+  async function loadRemoteOnce() {
+    if (!sb) return;
+    const { data } = await sb
+      .from("office_vibe")
+      .select("state")
+      .eq("room", ROOM)
+      .single();
+
+    if (!data?.state) return;
+    applyingRemote = true;
+    Object.assign(state, data.state);
+    applyingRemote = false;
+    render();
+  }
+
+  function subscribeRemote() {
+    if (!sb) return;
+
+    sb.channel("office_vibe_room_" + ROOM)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "office_vibe", filter: `room=eq.${ROOM}` },
+        (payload) => {
+          const incoming = payload?.new?.state;
+          if (!incoming) return;
+          if (incoming?._meta?.clientId === clientId) return;
+
+          applyingRemote = true;
+          Object.assign(state, incoming);
+          applyingRemote = false;
+
+          render();
+        }
+      )
+      .subscribe();
+  }
+
+  // ======================
+  // CORE LOGIC
+  // ======================
+  function getAvg() {
+    const vals = [state.a, state.f].filter(v => typeof v === "number");
+    if (!vals.length) return null;
+    const base = vals.reduce((s, v) => s + v, 0) / vals.length;
+    const boosted = Math.min(5, Math.max(1, base + visitorBoost()));
+    return boosted;
+  }
+
+  function moodFromAvg(avg) {
+    const n = Math.min(5, Math.max(1, Math.round(avg)));
+    return levels[n - 1];
+  }
+
+  async function setMood(who, val) {
+    state[who] = val;
+    state.updatedAt = nowISO();
+    bumpDaily(val);
+    pushHistory(`${whoName(who)} satte vibe: ${moodLabels[val]}`);
+    render();
+    await save(state);
+  }
+
+  async function addNote(who, tagOrText) {
+    const isObj = typeof tagOrText === "object";
+    const note = isObj ? tagOrText.label : (tagOrText || "");
+    if (!note.trim()) return;
+
+    const noteKey = who === "a" ? "aNote" : "fNote";
+    const moodKey = who;
+
+    state[noteKey] = note.trim();
+    state.updatedAt = nowISO();
+
+    if (isObj && tagOrText.chaos) {
+      if (typeof state[moodKey] === "number") state[moodKey] = Math.min(5, state[moodKey] + 1);
+      else state[moodKey] = 4;
+
+      state.frodeMode = true;
+      pushHistory(`💦 ${whoName(who)}: “${note}” → vibe +1`);
+      flashChaos();
+      playPlop();
+      render();
+      await save(state);
+      return;
+    }
+
+    pushHistory(`${whoName(who)}: “${note}”`);
+    render();
+    await save(state);
+
+    const input = document.getElementById(who === "a" ? "aNote" : "fNote");
+    if (input && input.value.trim() === note.trim()) input.value = "";
+  }
+
+  // ======================
+  // FULLSCREEN + TV MODE
+  // ======================
+  function shouldAutoTvMode() {
+    const url = new URL(location.href);
+    const tvParam = url.searchParams.get("tv");
+    if (tvParam === "1") return true;
+    return window.matchMedia("(min-width: 1200px)").matches;
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      document.getElementById("nudgeText").textContent =
+        "Fullskjerm ble blokkert. Prøv igjen (må trigges av klikk), eller bruk F11 manuelt.";
+    }
+  }
+
+  if (state.tvMode === false && shouldAutoTvMode()) {
+    state.tvMode = true;
+    state.updatedAt = nowISO();
+    pushHistory("🖥️ Storskjerm auto (stor skjerm / tv=1)");
+    save(state);
+  }
+
+  document.addEventListener("fullscreenchange", async () => {
+    if (!document.fullscreenElement) {
+      if (state.tvLocked) {
+        try { await document.documentElement.requestFullscreen(); } catch {}
+        pushHistory("🔒 Prøvde å forlate fullskjerm (låst) – ble dratt tilbake 😄");
+        await save(state);
+        render();
+        return;
+      }
+      if (state.tvMode) {
+        state.tvMode = false;
+        state.updatedAt = nowISO();
+        pushHistory("🖥️ Storskjerm av (forlot fullskjerm)");
+        await save(state);
+      }
+    }
+    render();
+  });
+
+  // ======================
+  // IDLE DIM
+  // ======================
+  let idleTimer = null;
+  function resetIdleTimer() {
+    if (state.dimmed) {
+      state.dimmed = false;
+      save(state);
+      render();
+    }
+    if (idleTimer) clearTimeout(idleTimer);
+
+    const ms = Math.max(1, state.idleDimMinutes || 7) * 60 * 1000;
+    idleTimer = setTimeout(() => {
+      if (state.tvMode) {
+        state.dimmed = true;
+        pushHistory("🌙 Auto-dim (inaktivitet)");
+        save(state);
+        render();
+      }
+    }, ms);
+  }
+
+  ["click","mousemove","keydown","touchstart","scroll"].forEach(evt =>
+    window.addEventListener(evt, resetIdleTimer, { passive: true })
+  );
+  document.getElementById("dimOverlay").addEventListener("click", resetIdleTimer);
+
+  // Visitors prune interval
+  setInterval(() => {
+    const before = state.visitors?.length ?? 0;
+    pruneVisitors();
+    const after = state.visitors?.length ?? 0;
+    if (before !== after) {
+      save(state);
+      render();
+    }
+  }, 10_000);
+
+  // ======================
+  // UI BUILD
+  // ======================
+  const aBtns = document.getElementById("aBtns");
+  const fBtns = document.getElementById("fBtns");
+
+  function makeMoodButtons(container, who) {
+    for (let i = 1; i <= 5; i++) {
+      const b = document.createElement("button");
+      b.textContent = moodLabels[i];
+      b.dataset.val = String(i);
+      b.addEventListener("click", () => setMood(who, i));
+      container.appendChild(b);
+    }
+  }
+  makeMoodButtons(aBtns, "a");
+  makeMoodButtons(fBtns, "f");
+
+  function makeTagButtons(container, who) {
+    quickTags.forEach(tag => {
+      const b = document.createElement("button");
+      b.className = "tagBtn";
+      b.textContent = tag.label;
+
+      if (tag.chaos) {
+        b.style.background = "linear-gradient(135deg, #ff4fd8, #ffb347)";
+        b.style.color = "#1a0f2e";
+        b.style.fontWeight = "900";
+        b.style.border = "1px solid rgba(255,255,255,.35)";
+      }
+
+      b.addEventListener("click", () => addNote(who, tag));
+      container.appendChild(b);
+    });
+  }
+  makeTagButtons(document.getElementById("aTags"), "a");
+  makeTagButtons(document.getElementById("fTags"), "f");
+
+  // Enter-to-save notes
+  document.getElementById("aNote").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addNote("a", e.target.value.trim());
+  });
+  document.getElementById("fNote").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addNote("f", e.target.value.trim());
+  });
+
+  // Buttons
+  document.getElementById("resetBtn").addEventListener("click", async () => {
+    state.a = null; state.f = null;
+    state.aNote = ""; state.fNote = "";
+    state.frodeMode = false;
+    state.updatedAt = nowISO();
+    state.history = [];
+    state.dimmed = false;
+    state.daily = {};
+    state.visitors = [];
+    await save(state);
+    render();
+  });
+
+  document.getElementById("frodeModeBtn").addEventListener("click", async () => {
+    state.frodeMode = !state.frodeMode;
+    state.updatedAt = nowISO();
+    pushHistory(`Frode-mode ${state.frodeMode ? "aktivert" : "deaktivert"}`);
+    if (state.frodeMode) {
+      state.f = 5;
+      state.fNote = "duå’n Frode";
+      bumpDaily(5);
+      pushHistory(`Frode satte vibe: ${moodLabels[5]} + “duå’n Frode”`);
+    }
+    render();
+    await save(state);
+  });
+
+  document.getElementById("muteBtn").addEventListener("click", async () => {
+    state.muted = !state.muted;
+    state.updatedAt = nowISO();
+    pushHistory(`🔇 Lyd ${state.muted ? "av" : "på"}`);
+    render();
+    await save(state);
+  });
+
+  document.getElementById("tvBtn").addEventListener("click", async () => {
+    state.tvMode = !state.tvMode;
+    state.updatedAt = nowISO();
+    pushHistory(`🖥️ Storskjerm ${state.tvMode ? "på" : "av"}`);
+    render();
+    await save(state);
+  });
+
+  document.getElementById("lockTvBtn").addEventListener("click", async () => {
+    state.tvLocked = !state.tvLocked;
+    state.updatedAt = nowISO();
+    pushHistory(`🔒 Storskjerm-lås ${state.tvLocked ? "på" : "av"}`);
+    render();
+    await save(state);
+  });
+
+  document.getElementById("fsBtn").addEventListener("click", async () => {
+    if (!state.tvMode) {
+      state.tvMode = true;
+      state.updatedAt = nowISO();
+      pushHistory("🖥️ Storskjerm på (via fullskjerm)");
+      render();
+      await save(state);
+    }
+    await toggleFullscreen();
+  });
+
+  document.getElementById("copyLinkBtn").addEventListener("click", async () => {
+    const url = location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      document.getElementById("nudgeText").textContent = "Link kopiert ✅ Lim den i Teams / send til Frode.";
+    } catch {
+      document.getElementById("nudgeText").textContent = "Klarte ikke auto-kopiere. Kopier adressen manuelt.";
+    }
+  });
+
+  // Fullscreen hint
+  const fsHint = document.getElementById("fsHint");
+  document.getElementById("fsHintHide").addEventListener("click", () => {
+    sessionStorage.setItem("hideFsHint", "1");
+    render();
+  });
+  document.getElementById("fsHintBtn").addEventListener("click", async () => {
+    if (!state.tvMode) {
+      state.tvMode = true;
+      state.updatedAt = nowISO();
+      pushHistory("🖥️ Storskjerm på (via fullskjerm-knapp)");
+      render();
+      await save(state);
+    }
+    await toggleFullscreen();
+  });
+
+  // Visitors
+  document.getElementById("heidiBtn").addEventListener("click", () => addVisitor("Heidi", 0.5, 20));
+  document.getElementById("katrineBtn").addEventListener("click", () => addVisitor("Katrine", 0.5, 20));
+  document.getElementById("chaosVisitorBtn").addEventListener("click", () => addVisitor("Sjefen", -0.5, 15));
+  document.getElementById("customVisitorAdd").addEventListener("click", () => {
+    const name = document.getElementById("customVisitorName").value.trim();
+    if (!name) return;
+    document.getElementById("customVisitorName").value = "";
+    addVisitor(name, 0.5, 20);
+  });
+
+  // ======================
+  // RENDER
+  // ======================
+  function render() {
+    document.body.classList.toggle("tv", !!state.tvMode);
+
+    document.getElementById("aLabel").textContent = state.a ? `Satt: ${moodLabels[state.a]}` : "Ikke satt";
+    document.getElementById("fLabel").textContent = state.f ? `Satt: ${moodLabels[state.f]}` : "Ikke satt";
+
+    document.getElementById("aNotePill").textContent = state.aNote ? `📝 ${state.aNote}` : "Ingen kommentar";
+    document.getElementById("fNotePill").textContent = state.fNote ? `📝 ${state.fNote}` : "Ingen kommentar";
+
+    [...aBtns.querySelectorAll("button")].forEach(btn => btn.classList.toggle("sel", Number(btn.dataset.val) === state.a));
+    [...fBtns.querySelectorAll("button")].forEach(btn => btn.classList.toggle("sel", Number(btn.dataset.val) === state.f));
+
+    document.getElementById("frodeBanner").classList.toggle("show", !!state.frodeMode);
+    document.getElementById("dimOverlay").classList.toggle("show", !!state.dimmed);
+
+    // Fullscreen hint
+    const url = new URL(location.href);
+    const tvParam = url.searchParams.get("tv");
+    const hideHint = sessionStorage.getItem("hideFsHint") === "1";
+    const shouldSuggestFullscreen =
+      !document.fullscreenElement &&
+      !hideHint &&
+      (tvParam === "1" || state.tvMode === true);
+    if (fsHint) fsHint.style.display = shouldSuggestFullscreen ? "block" : "none";
+
+    // Buttons text
+    document.getElementById("muteBtn").textContent = `Mute: ${state.muted ? "PÅ" : "AV"}`;
+    document.getElementById("tvBtn").textContent = `Storskjerm: ${state.tvMode ? "PÅ" : "AV"}`;
+    document.getElementById("fsBtn").textContent = document.fullscreenElement ? "Avslutt fullskjerm" : "Fullskjerm";
+    document.getElementById("lockTvBtn").textContent = `Lås: ${state.tvLocked ? "PÅ" : "AV"}`;
+
+    // Avg
+    const avg = getAvg();
+    if (!avg) {
+      document.getElementById("avgScore").textContent = "—";
+      document.getElementById("avgEmoji").textContent = "🧠";
+      document.getElementById("avgText").textContent = "Sett stemning for dere begge 👇";
+      document.getElementById("fill").style.transform = "scaleX(0.02)";
+    } else {
+      const m = moodFromAvg(avg);
+      document.getElementById("avgScore").textContent = avg.toFixed(1);
+      document.getElementById("avgEmoji").textContent = m.emoji;
+      document.getElementById("avgText").textContent = m.text;
+
+      const pct = (avg - 1) / 4;
+      document.getElementById("fill").style.transform = `scaleX(${0.1 + pct * 0.9})`;
+    }
+
+    // Daily
+    const k = todayKey();
+    const d = state.daily?.[k];
+    const dailyAvg = d && d.count ? (d.sum / d.count) : null;
+    document.getElementById("dailyPill").textContent = `Dagens vibe: ${dailyAvg ? dailyAvg.toFixed(1) : "—"}`;
+    document.getElementById("dailyCountPill").textContent = `Endringer i dag: ${d?.count ?? 0}`;
+
+    // Visitors pill
+    pruneVisitors();
+    const vp = document.getElementById("visitorPill");
+    if (!state.visitors?.length) vp.textContent = "Ingen besøk";
+    else {
+      const names = state.visitors.slice(0,3).map(v => `${v.name} (${v.effect >= 0 ? "+" : ""}${v.effect})`);
+      vp.textContent = `Besøk: ${names.join(" · ")}${state.visitors.length > 3 ? " …" : ""}`;
+    }
+
+    // History
+    const hist = document.getElementById("history");
+    hist.innerHTML = "";
+    if (!state.history.length) {
+      const div = document.createElement("div");
+      div.className = "histItem";
+      div.textContent = "Ingen hendelser ennå. Sett en vibe eller trykk en statusknapp.";
+      hist.appendChild(div);
+    } else {
+      state.history.forEach(h => {
+        const div = document.createElement("div");
+        div.className = "histItem";
+        div.textContent = `${fmtTime(h.t)} – ${h.text}`;
+        hist.appendChild(div);
+      });
+    }
+
+    // QR (points to non-tv)
+    const qrImg = document.getElementById("qrImg");
+    if (qrImg) {
+      const u = new URL(location.href);
+      u.searchParams.delete("tv");
+      const qrUrl = u.toString();
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl)}`;
+    }
+  }
+
+  // ======================
+  // STARTUP
+  // ======================
+  resetIdleTimer();
+  render();
+  loadRemoteOnce();
+  subscribeRemote();
+</script>
+</body>
+</html>
